@@ -1,14 +1,25 @@
-# Use a lightweight Java runtime
-FROM openjdk:17-jdk-slim
+# Stage 1: Build the app using Maven
+FROM maven:3.8.5-openjdk-17 AS build
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Copy the jar file built by Maven into the container
-COPY target/email-writer-sb-0.0.1-SNAPSHOT.jar app.jar
+# Copy pom.xml and source code
+COPY pom.xml .
+COPY src ./src
 
-# Expose port 8080 (default for Spring Boot)
+# Build the jar (skip tests for faster build)
+RUN mvn clean package -DskipTests
+
+# Stage 2: Run the app using lightweight JRE image
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+# Copy the jar from the build stage
+COPY --from=build /app/target/email-writer-sb-0.0.1-SNAPSHOT.jar app.jar
+
+# Expose the port Spring Boot runs on
 EXPOSE 8080
 
-# Command to run the application
+# Run the jar
 ENTRYPOINT ["java", "-jar", "app.jar"]
