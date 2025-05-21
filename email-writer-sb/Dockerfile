@@ -1,30 +1,30 @@
 # ---- Build Stage ----
 FROM eclipse-temurin:21-jdk AS build
 
-# Set working directory
 WORKDIR /app
+
+# Copy Maven wrapper and config
+COPY mvnw .
+COPY .mvn .mvn
 
 # Copy pom.xml and download dependencies
 COPY pom.xml .
 RUN ./mvnw dependency:go-offline || true
 
-# Copy source files
+# Copy the rest of the source code
 COPY . .
 
-# Package the application
+# Build the application
 RUN ./mvnw clean package -DskipTests
 
 # ---- Runtime Stage ----
 FROM eclipse-temurin:21-jdk
 
-# Set working directory inside the container
 WORKDIR /app
 
-# Copy the packaged jar from the build stage
+# Copy the built jar from the build stage
 COPY --from=build /app/target/email-writer-sb-0.0.1-SNAPSHOT.jar app.jar
 
-# Expose port 8080
 EXPOSE 8080
 
-# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
