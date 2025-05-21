@@ -1,25 +1,30 @@
-# Stage 1: Build the app using Maven
-FROM maven:3.8.5-openjdk-17 AS build
+# ---- Build Stage ----
+FROM eclipse-temurin:21-jdk AS build
 
+# Set working directory
 WORKDIR /app
 
-# Copy pom.xml and source code
+# Copy pom.xml and download dependencies
 COPY pom.xml .
-COPY src ./src
+RUN ./mvnw dependency:go-offline || true
 
-# Build the jar (skip tests for faster build)
-RUN mvn clean package -DskipTests
+# Copy source files
+COPY . .
 
-# Stage 2: Run the app using lightweight JRE image
-FROM openjdk:17-jdk-slim
+# Package the application
+RUN ./mvnw clean package -DskipTests
 
+# ---- Runtime Stage ----
+FROM eclipse-temurin:21-jdk
+
+# Set working directory inside the container
 WORKDIR /app
 
-# Copy the jar from the build stage
+# Copy the packaged jar from the build stage
 COPY --from=build /app/target/email-writer-sb-0.0.1-SNAPSHOT.jar app.jar
 
-# Expose the port Spring Boot runs on
+# Expose port 8080
 EXPOSE 8080
 
-# Run the jar
+# Run the application
 ENTRYPOINT ["java", "-jar", "app.jar"]
